@@ -4,6 +4,7 @@ import onnxruntime as ort
 from transformers import AutoTokenizer
 from huggingface_hub import hf_hub_download
 import numpy as np
+import pandas as pd
 
 # ==========================
 # 1. Repo ID Hugging Face
@@ -48,18 +49,55 @@ def predict(text):
 # ==========================
 # 4. Streamlit UI
 # ==========================
-st.title("📊 Sentiment Analysis (ONNX Model)")
-st.write("Masukkan teks untuk dianalisis menjadi salah satu dari 5 label:")
+st.set_page_config(page_title="Sentiment Analysis", page_icon="💬", layout="wide")
 
-user_input = st.text_area("Ketik teks di sini...")
+# Sidebar
+st.sidebar.title("💡 Tentang Aplikasi")
+st.sidebar.info(
+    """
+    Aplikasi ini menganalisis komentar teks dan memprediksi sentimen ke dalam **5 kategori**:
+    
+    - 😢 SADNESS  
+    - 😡 ANGER  
+    - 🤝 SUPPORT  
+    - 🌟 HOPE  
+    - 😞 DISAPPOINTMENT  
+    """
+)
+st.sidebar.write("Model format **ONNX** di-host di Hugging Face 🤗.")
 
-if st.button("Prediksi"):
+# Main title
+st.title("💬 Analisis Sentimen Komentar")
+st.write("Masukkan komentar/teks lalu klik **Prediksi** untuk melihat hasil analisis sentimen.")
+
+user_input = st.text_area("📝 Ketik komentar di sini...")
+
+if st.button("🔍 Prediksi Sentimen"):
     if user_input.strip() == "":
-        st.warning("⚠️ Harap masukkan teks dulu.")
+        st.warning("⚠️ Harap masukkan teks terlebih dahulu.")
     else:
         label, confidence, probs = predict(user_input)
-        st.success(f"✅ Prediksi: **{label}** (Confidence: {confidence:.2f})")
 
-        st.subheader("🔎 Detail Probabilitas")
-        for i, p in enumerate(probs):
-            st.write(f"- {id2label[i]}: {p:.4f}")
+        # Hasil utama
+        st.markdown(
+            f"""
+            <div style="padding:20px; border-radius:10px; background-color:#f0f2f6">
+                <h3>✅ Prediksi Utama: <span style="color: #1f77b4;">{label}</span></h3>
+                <p><b>Confidence:</b> {confidence:.2f}</p>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+        st.progress(confidence)
+
+        # Probabilitas lengkap
+        st.subheader("📊 Distribusi Probabilitas")
+        df_probs = pd.DataFrame({
+            "Label": [id2label[i] for i in range(len(probs))],
+            "Probabilitas": probs
+        })
+        st.bar_chart(df_probs.set_index("Label"))
+
+        # Tabel detail
+        st.dataframe(df_probs.style.format({"Probabilitas": "{:.4f}"}))
