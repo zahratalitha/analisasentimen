@@ -62,11 +62,11 @@ st.sidebar.header("ℹ️ Analisis Komentar Publik")
 st.sidebar.write("""
 Menganalisis **emosi komentar publik** terkait kasus Tom Lembong.
 Kategori emosi yang dideteksi:
-- 😢 Sadness  
-- 😡 Anger  
-- 🙌 Support  
-- 🌱 Hope  
-- 😞 Disappointment
+ 😢 Sadness  
+ 😡 Anger  
+ 🙌 Support  
+ 🌱 Hope  
+ 😞 Disappointment
 """)
 
 option = st.radio("Pilih mode input:", ["✍️ Tulis Komentar", "📂 Upload CSV"])
