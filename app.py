@@ -91,13 +91,11 @@ if st.button("🔍 Prediksi Sentimen"):
 
         st.progress(confidence)
 
-        # Probabilitas lengkap
-        st.subheader("📊 Distribusi Probabilitas")
+        # Top-5 prediksi
+        st.subheader("📌 Top-5 Prediksi")
         df_probs = pd.DataFrame({
             "Label": [id2label[i] for i in range(len(probs))],
             "Probabilitas": probs
-        })
-        st.bar_chart(df_probs.set_index("Label"))
+        }).sort_values("Probabilitas", ascending=False).reset_index(drop=True)
 
-        # Tabel detail
-        st.dataframe(df_probs.style.format({"Probabilitas": "{:.4f}"}))
+        st.table(df_probs.style.format({"Probabilitas": "{:.4f}"}))
