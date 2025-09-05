@@ -1,4 +1,3 @@
-# app.py
 import streamlit as st
 import onnxruntime as ort
 from transformers import AutoTokenizer
@@ -6,15 +5,9 @@ from huggingface_hub import hf_hub_download
 import numpy as np
 import pandas as pd
 
-# ==========================
-# 1. Repo ID Hugging Face
-# ==========================
 REPO_ID = "zahratalitha/sentimontom"
 MODEL_FILENAME = "model.onnx"
 
-# ==========================
-# 2. Load Model + Tokenizer
-# ==========================
 @st.cache_resource
 def load_model():
     model_path = hf_hub_download(repo_id=REPO_ID, filename=MODEL_FILENAME)
@@ -33,9 +26,6 @@ id2label = {
     4: "DISAPPOINTMENT"
 }
 
-# ==========================
-# 3. Prediction function
-# ==========================
 def predict(text):
     inputs = tokenizer(text, return_tensors="np", padding=True, truncation=True, max_length=128)
     ort_inputs = {k: v for k, v in inputs.items()}
@@ -46,16 +36,13 @@ def predict(text):
     pred_id = np.argmax(probs, axis=1)[0]
     return id2label[pred_id], float(probs[0][pred_id]), probs[0]
 
-# ==========================
-# 4. Streamlit UI
-# ==========================
 st.set_page_config(page_title="Sentiment Analysis", page_icon="💬", layout="wide")
 
 # Sidebar
 st.sidebar.title("💡 Tentang Aplikasi")
 st.sidebar.info(
     """
-    Aplikasi ini menganalisis komentar teks dan memprediksi sentimen ke dalam **5 kategori**:
+    Menganalisis komentar teks dan memprediksi sentimen ke dalam **5 kategori**:
     
     - 😢 SADNESS  
     - 😡 ANGER  
@@ -64,7 +51,7 @@ st.sidebar.info(
     - 😞 DISAPPOINTMENT  
     """
 )
-st.sidebar.write("Model format **ONNX** di-host di Hugging Face 🤗.")
+
 
 # Main title
 st.title("💬 Analisis Sentimen Komentar")
