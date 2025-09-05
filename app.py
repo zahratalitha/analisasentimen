@@ -60,7 +60,7 @@ def predict(text):
 
 st.sidebar.header("ℹ️ Analisis Komentar Publik")
 st.sidebar.write("""
-Menganalisis **emosi komentar publik** terkait kasus Tom Lembong.
+Menganalisis emosi komentar publik terkait kasus Tom Lembong.
 Kategori emosi yang dideteksi:
  
  😢 Sadness  
