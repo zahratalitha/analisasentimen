@@ -1,37 +1,29 @@
+# app.py
 import streamlit as st
-import numpy as np
 import onnxruntime as ort
 from transformers import AutoTokenizer
-import re
-import pandas as pd
-import os
+from huggingface_hub import hf_hub_download
+import numpy as np
 
-# ==============================
-# Setup Streamlit
-# ==============================
-st.set_page_config(page_title="💬 Analisis Sentimen", page_icon="💬")
-st.title("💬 Analisis Sentimen Komentar Sosial Media")
+# ==========================
+# 1. Repo ID Hugging Face
+# ==========================
+REPO_ID = "zahratalitha/sentimontom"
+MODEL_FILENAME = "model.onnx"
 
-# ==============================
-# Load Model ONNX + Tokenizer
-# ==============================
-MODEL_REPO = "zahratalitha/sentimontom"  # ganti sesuai repo kamu
-MODEL_PATH = "model.onnx"
-TOKENIZER_PATH = MODEL_REPO  # tokenizer di repo yang sama
-
+# ==========================
+# 2. Load Model + Tokenizer
+# ==========================
 @st.cache_resource
 def load_model():
-    # Load ONNX Runtime session
-    ort_session = ort.InferenceSession(MODEL_PATH, providers=["CPUExecutionProvider"])
-    # Load tokenizer dari HuggingFace
-    tokenizer = AutoTokenizer.from_pretrained(TOKENIZER_PATH)
+    model_path = hf_hub_download(repo_id=REPO_ID, filename=MODEL_FILENAME)
+    ort_session = ort.InferenceSession(model_path, providers=["CPUExecutionProvider"])
+    tokenizer = AutoTokenizer.from_pretrained(REPO_ID)
     return ort_session, tokenizer
 
 ort_session, tokenizer = load_model()
 
-# ==============================
-# Label Mapping
-# ==============================
+# Label sesuai dataset
 id2label = {
     0: "SADNESS",
     1: "ANGER",
@@ -40,72 +32,34 @@ id2label = {
     4: "DISAPPOINTMENT"
 }
 
-# ==============================
-# Preprocessing
-# ==============================
-slang_dict = {
-    "yg": "yang", "ga": "tidak", "gk": "tidak", "ngga": "tidak",
-    "nggak": "tidak", "tdk": "tidak", "dgn": "dengan", "aja": "saja",
-    "gmn": "gimana", "bgt": "banget", "dr": "dari", "utk": "untuk",
-    "dlm": "dalam", "tp": "tapi", "krn": "karena"
-}
-important_mentions = ["tomlembong", "jokowi", "prabowo"]
-important_hashtags = ["savetomlembong", "respect", "ripjustice"]
-
-def clean_text(text):
-    if pd.isna(text):
-        return ""
-    text = text.lower()
-    text = re.sub(r"http\S+|www\S+|https\S+", "", text)
-
-    def mention_repl(match):
-        mention = match.group(1)
-        return mention if mention in important_mentions else ""
-    text = re.sub(r"@(\w+)", mention_repl, text)
-
-    def hashtag_repl(match):
-        hashtag = match.group(1)
-        return hashtag if hashtag in important_hashtags else ""
-    text = re.sub(r"#(\w+)", hashtag_repl, text)
-
-    text = re.sub(r"[^a-z0-9\s]", " ", text)
-    tokens = text.split()
-    tokens = [slang_dict.get(tok, tok) for tok in tokens]
-    text = " ".join(tokens)
-    text = re.sub(r"\s+", " ", text).strip()
-    return text
-
-# ==============================
-# Prediction Function
-# ==============================
+# ==========================
+# 3. Prediction function
+# ==========================
 def predict(text):
-    cleaned = clean_text(text)
-    inputs = tokenizer(
-        cleaned,
-        return_tensors="np",
-        truncation=True,
-        padding="max_length",
-        max_length=128
-    )
-
+    inputs = tokenizer(text, return_tensors="np", padding=True, truncation=True, max_length=128)
     ort_inputs = {k: v for k, v in inputs.items()}
     ort_outs = ort_session.run(None, ort_inputs)
-    probs = np.exp(ort_outs[0]) / np.exp(ort_outs[0]).sum(-1, keepdims=True)
+    logits = ort_outs[0]
 
-    top_idx = np.argmax(probs, axis=1)[0]
-    confidence = float(np.max(probs))
-    return id2label[top_idx], confidence, cleaned
+    probs = np.exp(logits) / np.exp(logits).sum(-1, keepdims=True)
+    pred_id = np.argmax(probs, axis=1)[0]
+    return id2label[pred_id], float(probs[0][pred_id]), probs[0]
 
-# ==============================
-# Streamlit UI
-# ==============================
-st.subheader("Masukkan komentar:")
-user_input = st.text_area("Komentar:", "")
+# ==========================
+# 4. Streamlit UI
+# ==========================
+st.title("📊 Sentiment Analysis (ONNX Model)")
+st.write("Masukkan teks untuk dianalisis menjadi salah satu dari 5 label:")
 
-if st.button("🔍 Analisis Sentimen"):
-    if user_input.strip():
-        label, score, cleaned = predict(user_input)
-        st.info(f"📝 Setelah preprocessing: {cleaned}")
-        st.success(f"**Prediksi:** {label} (confidence: {score:.2f})")
+user_input = st.text_area("Ketik teks di sini...")
+
+if st.button("Prediksi"):
+    if user_input.strip() == "":
+        st.warning("⚠️ Harap masukkan teks dulu.")
     else:
-        st.warning("Masukkan teks komentar terlebih dahulu!")
+        label, confidence, probs = predict(user_input)
+        st.success(f"✅ Prediksi: **{label}** (Confidence: {confidence:.2f})")
+
+        st.subheader("🔎 Detail Probabilitas")
+        for i, p in enumerate(probs):
+            st.write(f"- {id2label[i]}: {p:.4f}")
