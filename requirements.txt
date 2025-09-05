@@ -1,0 +1,6 @@
+streamlit==1.38.0
+onnxruntime==1.19.0
+transformers==4.44.2
+huggingface_hub==0.24.6
+pandas
+numpy
