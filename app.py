@@ -1,4 +1,3 @@
-# app.py
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -7,23 +6,14 @@ from transformers import AutoTokenizer
 from huggingface_hub import hf_hub_download
 import re
 
-# ==============================
-# 1. Konfigurasi Aplikasi
-# ==============================
 st.set_page_config(page_title="Emotion Mining - Tom Lembong", page_icon="💬", layout="wide")
 
 st.title("💬 Emotion Mining on Social Media Comments")
 st.caption("Analisis komentar publik terkait kasus **Tom Lembong**")
 
-# ==============================
-# 2. Repo Hugging Face
-# ==============================
 REPO_ID = "zahratalitha/sentimontom"
 MODEL_FILENAME = "model.onnx"
 
-# ==============================
-# 3. Preprocessing
-# ==============================
 slang_dict = {
     "yg": "yang", "ga": "tidak", "gk": "tidak", "ngga": "tidak",
     "nggak": "tidak", "tdk": "tidak", "dgn": "dengan", "aja": "saja",
@@ -39,9 +29,6 @@ def clean_text(text):
     tokens = [slang_dict.get(tok, tok) for tok in tokens]
     return " ".join(tokens).strip()
 
-# ==============================
-# 4. Load Model & Tokenizer
-# ==============================
 @st.cache_resource
 def load_model():
     model_path = hf_hub_download(repo_id=REPO_ID, filename=MODEL_FILENAME)
@@ -51,9 +38,6 @@ def load_model():
 
 ort_session, tokenizer = load_model()
 
-# ==============================
-# 5. Label Mapping + Warna
-# ==============================
 id2label = {
     0: ("😢 SADNESS", "blue"),
     1: ("😡 ANGER", "red"),
@@ -62,9 +46,6 @@ id2label = {
     4: ("😞 DISAPPOINTMENT", "gray")
 }
 
-# ==============================
-# 6. Fungsi Prediksi
-# ==============================
 def predict(text):
     clean = clean_text(text)
     inputs = tokenizer(clean, return_tensors="np", padding=True, truncation=True, max_length=128)
@@ -76,12 +57,10 @@ def predict(text):
     pred_id = np.argmax(probs, axis=1)[0]
     return id2label[pred_id][0], float(probs[0][pred_id]), probs[0], clean
 
-# ==============================
-# 7. Sidebar
-# ==============================
-st.sidebar.header("ℹ️ Tentang Aplikasi")
+
+st.sidebar.header("ℹ️ Analisis Komentar Publik")
 st.sidebar.write("""
-Aplikasi ini menganalisis **emosi komentar publik** terkait kasus Tom Lembong.
+Menganalisis **emosi komentar publik** terkait kasus Tom Lembong.
 Kategori emosi yang dideteksi:
 - 😢 Sadness  
 - 😡 Anger  
@@ -90,9 +69,6 @@ Kategori emosi yang dideteksi:
 - 😞 Disappointment
 """)
 
-# ==============================
-# 8. Input Opsi
-# ==============================
 option = st.radio("Pilih mode input:", ["✍️ Tulis Komentar", "📂 Upload CSV"])
 
 if option == "✍️ Tulis Komentar":
@@ -130,10 +106,8 @@ elif option == "📂 Upload CSV":
             
             st.dataframe(result_df)
 
-            # Ringkasan distribusi
             st.subheader("📊 Distribusi Emosi")
             st.bar_chart(result_df["Label"].value_counts())
 
-            # Download hasil
             csv = result_df.to_csv(index=False).encode("utf-8")
             st.download_button("💾 Download Hasil Analisis", csv, "hasil_analisis.csv", "text/csv")
